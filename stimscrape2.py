@@ -4,6 +4,7 @@ import praw
 import datetime
 import nltk
 nltk.download('punkt')
+nltk.download('stopwords')
 from nltk.corpus import stopwords
 import string
 import math
@@ -64,12 +65,8 @@ def collect_comments(subreddit_string, count, startdate, enddate, freqspec):
                 comment_dict['authors'].append(author)
                 comment_dict['comments'].append(tokenize_comment(body))
                 comment_dict['links'].append(link)
-    
+		df = pd.DataFrame.from_dict(comment_dict)
+		df.to_csv('opiates_comments.csv')
     return comment_dict
 
-comment_dict=collect_comments('opiates',None,'11/14/2010','11/16/2015','D')
-#print comment_dict
-
-df = pd.DataFrame.from_dict(comment_dict)
-#print df
-df.to_csv('Documents/Stimscrape/opiates_comments.csv')
+comment_dict=collect_comments('opiates',None,'08/02/2011','11/16/2015','D')
