@@ -7,10 +7,21 @@ nltk.download('punkt')
 nltk.download('stopwords')
 from nltk.corpus import stopwords
 import string
-
+import urllib
+import time
 
 english_stops = stopwords.words('english')
 
+def internet_on():
+    try :
+        stri = "https://www.google.com"
+        tempdata = urllib.urlopen(stri)
+        return True
+    except :
+        print "not connected"
+        time.sleep(10) 
+        return False
+        
 def tokenize_comment(comment): #converts comment into non-stopword, non-punctuation space-delimited string
     tokens=nltk.wordpunct_tokenize(comment) #makes individual words from comments
     tokens=[token.lower() for token in tokens if token.lower() not in english_stops] #removes stopwords
@@ -36,7 +47,7 @@ def collect_comments(subreddit_string, count, startdate, enddate, freqspec):
 
     date_range = list(pd.date_range(start=startdate, end=enddate, freq=freqspec)) #populates date range with specified frequency
 
-    comment_dict={'authors':[],'comments':[],'links':[],'dates':[]} #where our comments will be stored
+    comment_dict={'authors':[],'comments':[],'links':[],'commenttimes':[]} #where our comments will be stored
 
     for lower_timestamp, upper_timestamp in zip(date_range, date_range[1:]):
         print 'Starting new reddit search query for: ', lower_timestamp
@@ -46,14 +57,22 @@ def collect_comments(subreddit_string, count, startdate, enddate, freqspec):
 
         # Create query for timeframe
         query = 'timestamp:%d..%d' % (lower_timestamp_epoch, upper_timestamp_epoch)
+        while True:
+            if internet_on():
+                break
         submissions = r.search(query, subreddit=subreddit_string, sort='new', limit=count, syntax='cloudsearch')
     
          # Loop through the submissions
         for submission in submissions:
             print 'Starting on new submission' 
             try:
+                while True:
+                    if internet_on():
+                        break
                 submission.replace_more_comments(limit=None, threshold=1) #this may take a while...
-
+                while True:
+                    if internet_on():
+                        break
                 flat_comments = praw.helpers.flatten_tree(submission.comments) #this gives us more than just the top comment
                 for x in flat_comments:
                     print '.',
@@ -62,14 +81,16 @@ def collect_comments(subreddit_string, count, startdate, enddate, freqspec):
                     author=str(x['author'])
                     body=str(x['body'].encode('utf8'))
                     link=str(x['link_id'].encode('utf8'))
+                    commenttime=float(x['created'])
                     comment_dict['authors'].append(author)
                     comment_dict['comments'].append(tokenize_comment(body))
                     comment_dict['links'].append(link)
-    
+                    comment_dict['commenttimes'].append(commenttime)
+                    
                 df = pd.DataFrame.from_dict(comment_dict)
                 df.to_csv('opiates_comments.csv')
             except Exception:
                 print 'error'
     return comment_dict
 
-comment_dict=collect_comments('opiates',None,'11/16/2010','11/16/2015','M')
+comment_dict=collect_comments('opiates',None,'11/14/2010','11/16/2015','M')
